@@ -2,7 +2,7 @@
 
 ## Head (Avatar) API
 
-`API_KEY="" HOST="localhost" PORT="11451" python head.py` 
+`API_KEY="" HOST="localhost" PORT="11451" python avatar.py` 
 
 | Method | Path        | Description            |
 | ------ | ----------- | ---------------------- |
