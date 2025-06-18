@@ -2,7 +2,7 @@ import enum
 from pathlib import Path
 import detect
 from loguru import logger
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFilter
 
 
 class GenSquareType(enum.StrEnum):
@@ -100,3 +100,95 @@ def square(
         logger.error("未生成任何头像图片")
         return None
     return result_paths
+
+
+def mask(
+    type: GenSquareType,
+    img_path: Path,
+    output_dir: Path,
+    padding_ratio: float = 0.2,
+    color: str = "red",
+    width: int = 8,
+) -> Path:
+    """Mark an area in the image based on the detected object."""
+    if detector.get(type) is None:
+        logger.error(f"不支持的类型: {type}")
+        return img_path
+    results = detector[type](img_path)
+    if not results:
+        logger.error("未检测到任何对象")
+        return img_path
+    image = Image.open(img_path)
+    draw = ImageDraw.Draw(image)
+    img_width, img_height = image.size
+
+    for (x0, y0, x1, y1), _, _ in results:
+        box_width = x1 - x0
+        box_height = y1 - y0
+        pad_w = box_width * padding_ratio
+        pad_h = box_height * padding_ratio
+
+        nx0 = max(0, x0 - pad_w)
+        ny0 = max(0, y0 - pad_h)
+        nx1 = min(img_width, x1 + pad_w)
+        ny1 = min(img_height, y1 + pad_h)
+
+        draw.rectangle([(nx0, ny0), (nx1, ny1)], outline=color, width=width)
+    output_path = output_dir / f"{img_path.stem}_{type}_marked.png"
+    image.save(output_path, format="PNG")
+    logger.info(f"标记后的图片已保存到: {output_path}")
+    return output_path
+
+
+def highlight(
+    type: GenSquareType,
+    img_path: Path,
+    output_dir: Path,
+    padding_ratio: float = 0.3,
+    blur_radius: float = 15,
+    with_mask: bool = False,
+    mask_color: str = "red",
+    mask_width: int = 8,
+) -> Path:
+    if detector.get(type) is None:
+        logger.error(f"Unsupported type: {type}")
+        return img_path
+
+    results = detector[type](img_path)
+    if not results:
+        logger.error("No objects detected")
+        return img_path
+    image = Image.open(img_path).convert("RGB")
+    blurred = image.filter(ImageFilter.GaussianBlur(radius=blur_radius))
+    img_width, img_height = image.size
+    mask = Image.new("L", (img_width, img_height), 0)
+    mask_draw = ImageDraw.Draw(mask)
+    boxes = []
+    for (x0, y0, x1, y1), label, score in results:
+        box_w = x1 - x0
+        box_h = y1 - y0
+        pad_w = box_w * padding_ratio
+        pad_h = box_h * padding_ratio
+
+        nx0 = max(0, x0 - pad_w)
+        ny0 = max(0, y0 - pad_h)
+        nx1 = min(img_width, x1 + pad_w)
+        ny1 = min(img_height, y1 + pad_h)
+
+        mask_draw.rectangle([(nx0, ny0), (nx1, ny1)], fill=255)
+        boxes.append((nx0, ny0, nx1, ny1))
+
+    highlighted = Image.composite(image, blurred, mask)
+
+    if with_mask and boxes:
+        draw = ImageDraw.Draw(highlighted)
+        for nx0, ny0, nx1, ny1 in boxes:
+            draw.rectangle(
+                [(nx0, ny0), (nx1, ny1)], outline=mask_color, width=mask_width
+            )
+
+    output_path = output_dir / f"{img_path.stem}_{type}_highlighted.png"
+    if not output_dir.exists():
+        output_dir.mkdir(parents=True, exist_ok=True)
+    highlighted.save(output_path)
+    return output_path
