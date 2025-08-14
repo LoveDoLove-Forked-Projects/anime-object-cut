@@ -78,7 +78,7 @@ async def cut_image(
         ...,
         description="上传的图片文件",
     ),
-    size: int = Form(512, description="目标正方形边长 (像素)", ge=32),
+    size: int = Form(640, description="目标正方形边长 (像素)", ge=32),
     padding: float = Form(
         0.3,
         description="对象周围的扩展比例 (0.3表示在对象基础上向外扩展30%)",
@@ -136,7 +136,7 @@ async def cut_all_images(
         ...,
         description="上传的图片文件",
     ),
-    size: int = Form(512, description="目标正方形边长 (像素)", ge=32),
+    size: int = Form(640, description="目标正方形边长 (像素)", ge=32),
     padding: float = Form(
         0.3,
         description="对象周围的扩展比例 (0.3表示在对象基础上向外扩展30%)",
@@ -326,7 +326,7 @@ async def cut_avatar(
         ...,
         description="上传的图片文件",
     ),
-    size: int = Form(512, description="目标正方形边长 (像素)", ge=32),
+    size: int = Form(640, description="目标正方形边长 (像素)", ge=32),
     padding: float = Form(
         0.3,
         description="头像周围的扩展比例 (0.3表示在头部基础上向外扩展30%)",
